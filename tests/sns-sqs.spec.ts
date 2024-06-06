@@ -9,7 +9,9 @@ import {
     SqsMessage,
 } from '../src';
 
-import * as aws from 'aws-sdk';
+import { S3 } from '@aws-sdk/client-s3';
+import { SNS } from '@aws-sdk/client-sns';
+import { SQS } from '@aws-sdk/client-sqs';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from '../src/types';
 
@@ -32,20 +34,22 @@ const TEST_ENDPOINTS = {
 const TEST_BUCKET_NAME = 'aspecto-message-payload';
 
 function getClients() {
-    const sns = new aws.SNS({
+    const sns = new SNS({
         endpoint: TEST_ENDPOINTS.snsEndpointUrl,
         region: TEST_REGION,
     });
 
-    const sqs = new aws.SQS({
+    const sqs = new SQS({
         endpoint: TEST_ENDPOINTS.sqsEndpointUrl,
         region: TEST_REGION,
     });
 
-    const s3 = new aws.S3({
+    const s3 = new S3({
         endpoint: TEST_ENDPOINTS.s3EndpointUrl,
         region: TEST_REGION,
-        s3ForcePathStyle: true,
+
+        // The key s3ForcePathStyle is renamed to forcePathStyle.
+        forcePathStyle: true,
     });
 
     return { sns, sqs, s3 };
@@ -53,27 +57,25 @@ function getClients() {
 async function initAws() {
     const { sns, sqs } = getClients();
     const res = await Promise.all([
-        await sns.createTopic({ Name: 'test-sns-producer' }).promise(),
-        await sqs.createQueue({ QueueName: QUEUE_NAME }).promise(),
-        await sqs.createQueue({ QueueName: QUEUE_2_NAME }).promise(),
+        await sns.createTopic({ Name: 'test-sns-producer' }),
+        await sqs.createQueue({ QueueName: QUEUE_NAME }),
+        await sqs.createQueue({ QueueName: QUEUE_2_NAME }),
     ]);
-    testQueueUrl = res[1].QueueUrl;
-    testQueue2Url = res[2].QueueUrl;
-    await sns
-        .subscribe({
-            Protocol: 'sqs',
-            TopicArn: TEST_TOPIC_ARN,
-            Endpoint: testQueueUrl,
-        })
-        .promise();
+    testQueueUrl = res[1].QueueUrl || 'error';
+    testQueue2Url = res[2].QueueUrl || 'error';
+    await sns.subscribe({
+        Protocol: 'sqs',
+        TopicArn: TEST_TOPIC_ARN,
+        Endpoint: testQueueUrl,
+    });
 }
 
 async function cleanAws() {
     const { sns, sqs } = getClients();
     await Promise.all([
-        sns.deleteTopic({ TopicArn: TEST_TOPIC_ARN }).promise(),
-        sqs.deleteQueue({ QueueUrl: testQueueUrl }).promise(),
-        sqs.deleteQueue({ QueueUrl: testQueue2Url }).promise(),
+        sns.deleteTopic({ TopicArn: TEST_TOPIC_ARN }),
+        sqs.deleteQueue({ QueueUrl: testQueueUrl }),
+        sqs.deleteQueue({ QueueUrl: testQueue2Url }),
     ]);
 }
 
@@ -99,30 +101,32 @@ async function sendS3Payload(s3PayloadMeta: S3PayloadMeta, options: Partial<SqsP
     return await sqsProducer.sendS3Payload(s3PayloadMeta);
 }
 
-async function sendMessageInCompatibilityFormat(jsonBody: any, options: Partial<SqsProducerOptions>, generateMessageTemplate?: (s3BucketName: string, s3Key: string) => string) {
+async function sendMessageInCompatibilityFormat(
+    jsonBody: any,
+    options: Partial<SqsProducerOptions>,
+    generateMessageTemplate?: (s3BucketName: string, s3Key: string) => string
+) {
     const s3ObjectKey = uuid();
     const { s3, sqs } = getClients();
     const s3Response = await s3.putObject({
         Bucket: options.s3Bucket,
         Key: s3ObjectKey,
         Body: jsonBody,
-    }).promise();
-    const sqsResponse = await sqs
-        .sendMessage({
-            QueueUrl: options.queueUrl,
-            MessageBody: generateMessageTemplate ?
-                generateMessageTemplate(options.s3Bucket, s3ObjectKey) :
-                `["software.amazon.payloadoffloading.PayloadS3Pointer",{"s3BucketName":"${options.s3Bucket}","s3Key":"${s3ObjectKey}"}]`,
-            MessageAttributes: {
-                SQSLargePayloadSize: {
-                    StringValue: '5198',
-                    StringListValues: [],
-                    BinaryListValues: [],
-                    DataType: 'Number',
-                },
+    });
+    const sqsResponse = await sqs.sendMessage({
+        QueueUrl: options.queueUrl,
+        MessageBody: generateMessageTemplate
+            ? generateMessageTemplate(options.s3Bucket || 'error', s3ObjectKey)
+            : `["software.amazon.payloadoffloading.PayloadS3Pointer",{"s3BucketName":"${options.s3Bucket}","s3Key":"${s3ObjectKey}"}]`,
+        MessageAttributes: {
+            SQSLargePayloadSize: {
+                StringValue: '5198',
+                StringListValues: [],
+                BinaryListValues: [],
+                DataType: 'Number',
             },
-        })
-        .promise();
+        },
+    });
     return { s3Response, sqsResponse, s3ObjectKey };
 }
 
@@ -186,13 +190,13 @@ async function receiveMessages(
         sqsConsumer.on(SqsConsumerEvents.processingError, () => {
             sqsConsumer.stop();
             clearTimeout(timeoutId);
-            resolve();
+            resolve([]);
         });
 
         sqsConsumer.on(SqsConsumerEvents.s3extendedPayloadError, () => {
             sqsConsumer.stop();
             clearTimeout(timeoutId);
-            resolve();
+            resolve([]);
         });
 
         if (eventHandlers) {
@@ -211,12 +215,10 @@ async function receiveMessages(
 describe('sns-sqs-big-payload', () => {
     beforeAll(async () => {
         const { s3 } = getClients();
-        await s3
-            .createBucket({
-                Bucket: TEST_BUCKET_NAME,
-                ACL: 'public-read',
-            })
-            .promise();
+        await s3.createBucket({
+            Bucket: TEST_BUCKET_NAME,
+            ACL: 'public-read',
+        });
     });
 
     beforeEach(async () => {
@@ -298,25 +300,37 @@ describe('sns-sqs-big-payload', () => {
 
             describe('when processing the message format of AWS client lib', () => {
                 const handlers = getEventHandlers();
-                const processAWSClientLibMessage = async (generateMessageTemplate: (s3BucketName: string, s3Key: string) => string) => {
+                const processAWSClientLibMessage = async (
+                    generateMessageTemplate: (s3BucketName: string, s3Key: string) => string
+                ) => {
                     const messageSizeThreshold = 1024;
                     const message = 'x'.repeat(messageSizeThreshold + 1);
-                    const { s3ObjectKey } = await sendMessageInCompatibilityFormat(JSON.stringify(message), {
-                        largePayloadThoughS3: true,
-                        s3Bucket: TEST_BUCKET_NAME,
-                        queueUrl: testQueueUrl,
-                        messageSizeThreshold,
-                    }, generateMessageTemplate);
+                    const { s3ObjectKey } = await sendMessageInCompatibilityFormat(
+                        JSON.stringify(message),
+                        {
+                            largePayloadThoughS3: true,
+                            s3Bucket: TEST_BUCKET_NAME,
+                            queueUrl: testQueueUrl,
+                            messageSizeThreshold,
+                        },
+                        generateMessageTemplate
+                    );
 
-                    await receiveMessages(1, {
-                        getPayloadFromS3: true,
-                        extendedLibraryCompatibility: true,
-                    }, handlers);
+                    await receiveMessages(
+                        1,
+                        {
+                            getPayloadFromS3: true,
+                            extendedLibraryCompatibility: true,
+                        },
+                        handlers
+                    );
                     return s3ObjectKey;
                 };
 
                 it('should not trigger s3extendedPayloadError event when the message is in correct format', async () => {
-                    await processAWSClientLibMessage(undefined);
+                    const generateMessageTemplate = (s3BucketName: string, s3Key: string) => '';
+                    //                        `{"s3BucketName":"${s3BucketName}","s3Key":"${s3Key}"}`;
+                    await processAWSClientLibMessage(generateMessageTemplate);
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).not.toBeCalled();
                 });
 
@@ -330,7 +344,7 @@ describe('sns-sqs-big-payload', () => {
                         message: {
                             s3BucketName: TEST_BUCKET_NAME,
                             s3Key: s3ObjectKey,
-                        }
+                        },
                     });
                 });
 
@@ -342,11 +356,11 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3Key: s3ObjectKey,
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
 
@@ -358,11 +372,11 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3BucketName: TEST_BUCKET_NAME,
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
 
@@ -374,12 +388,12 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3RandomBucketNameKey: TEST_BUCKET_NAME,
                                 s3Key: s3ObjectKey,
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
 
@@ -391,12 +405,12 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3BucketName: TEST_BUCKET_NAME,
                                 s3RandomObjectKey: s3ObjectKey,
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
 
@@ -408,12 +422,12 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3BucketName: '',
                                 s3Key: s3ObjectKey,
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
 
@@ -425,12 +439,12 @@ describe('sns-sqs-big-payload', () => {
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
                         err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            'software.amazon.payloadoffloading.PayloadS3Pointer',
                             {
                                 s3BucketName: TEST_BUCKET_NAME,
                                 s3Key: '',
-                            }
-                        ]
+                            },
+                        ],
                     });
                 });
             });
@@ -516,18 +530,18 @@ describe('sns-sqs-big-payload', () => {
                         extendedLibraryCompatibility: true,
                     });
 
-                    expect(JSON.parse(receivedMessage.message.Body)).toEqual(
-                        [
-                            "software.amazon.payloadoffloading.PayloadS3Pointer",
-                            {"s3BucketName":TEST_BUCKET_NAME,"s3Key":s3Response.Key}
-                        ]
-                    );
+                    expect(JSON.parse(receivedMessage.message.Body || 'error')).toEqual([
+                        'software.amazon.payloadoffloading.PayloadS3Pointer',
+                        { s3BucketName: TEST_BUCKET_NAME, s3Key: s3Response.Key },
+                    ]);
                 });
 
                 it('should be compatible with processing the message format of AWS client lib', async () => {
                     const messageSizeThreshold = 1024;
                     const message = 'x'.repeat(messageSizeThreshold + 1);
-                    const { sqsResponse: { MessageId } } = await sendMessageInCompatibilityFormat(JSON.stringify(message), {
+                    const {
+                        sqsResponse: { MessageId },
+                    } = await sendMessageInCompatibilityFormat(JSON.stringify(message), {
                         largePayloadThoughS3: true,
                         s3Bucket: TEST_BUCKET_NAME,
                         queueUrl: testQueueUrl,

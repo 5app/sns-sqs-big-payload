@@ -1,7 +1,13 @@
-import * as aws from 'aws-sdk';
+import { ServiceException } from '@smithy/smithy-client';
+import { S3 } from '@aws-sdk/client-s3';
+import {
+    Message,
+    MessageAttributeValue,
+    ReceiveMessageCommandInput,
+    ReceiveMessageCommandOutput,
+    SQS,
+} from '@aws-sdk/client-sqs';
 import { EventEmitter } from 'events';
-import { Message, MessageBodyAttributeMap, ReceiveMessageRequest, ReceiveMessageResult } from 'aws-sdk/clients/sqs';
-import { AWSError } from 'aws-sdk';
 import { PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta } from './types';
 import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './constants';
 
@@ -11,8 +17,8 @@ export interface SqsConsumerOptions {
     batchSize?: number;
     waitTimeSeconds?: number;
     getPayloadFromS3?: boolean;
-    sqs?: aws.SQS;
-    s3?: aws.S3;
+    sqs?: SQS;
+    s3?: S3;
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
@@ -51,8 +57,8 @@ export interface SqsMessage {
 }
 
 export class SqsConsumer {
-    private sqs: aws.SQS;
-    private s3: aws.S3;
+    private sqs: SQS;
+    private s3: S3;
     private queueUrl: string;
     private getPayloadFromS3: boolean;
     private batchSize: number;
@@ -70,7 +76,7 @@ export class SqsConsumer {
         if (options.sqs) {
             this.sqs = options.sqs;
         } else {
-            this.sqs = new aws.SQS({
+            this.sqs = new SQS({
                 region: options.region,
                 endpoint: options.sqsEndpointUrl,
             });
@@ -79,7 +85,7 @@ export class SqsConsumer {
             if (options.s3) {
                 this.s3 = options.s3;
             } else {
-                this.s3 = new aws.S3({
+                this.s3 = new S3({
                     region: options.region,
                     endpoint: options.s3EndpointUrl,
                 });
@@ -145,11 +151,15 @@ export class SqsConsumer {
         this.events.emit(SqsConsumerEvents.pollEnded);
     }
 
-    private isConnError(err: AWSError): boolean {
-        return err.statusCode === 403 || err.code === 'CredentialsError' || err.code === 'UnknownEndpoint';
+    private isConnError(err: ServiceException): boolean {
+        return (
+            err.$metadata?.httpStatusCode === 403 ||
+            err.$response?.body?.code === 'CredentialsError' ||
+            err.$response?.body?.code === 'UnknownEndpoint'
+        );
     }
 
-    private async handleSqsResponse(result: ReceiveMessageResult): Promise<void> {
+    private async handleSqsResponse(result: ReceiveMessageCommandOutput): Promise<void> {
         if (result && result.Messages) {
             if (this.handleBatch) {
                 await this.processBatch(result.Messages);
@@ -219,7 +229,7 @@ export class SqsConsumer {
 
     private async getMessagePayload(
         messageBody: any,
-        attributes: MessageBodyAttributeMap
+        attributes: Record<string, MessageAttributeValue>
     ): Promise<{ rawPayload: any; s3PayloadMeta?: S3PayloadMeta }> {
         if (!this.getPayloadFromS3) {
             return { rawPayload: messageBody };
@@ -262,9 +272,10 @@ export class SqsConsumer {
             }
             if (s3PayloadMeta) {
                 try {
-                    const s3Response = await this.s3
-                        .getObject({ Bucket: s3PayloadMeta.Bucket, Key: s3PayloadMeta.Key })
-                        .promise();
+                    const s3Response = await this.s3.getObject({
+                        Bucket: s3PayloadMeta.Bucket,
+                        Key: s3PayloadMeta.Key,
+                    });
                     return { rawPayload: s3Response.Body, s3PayloadMeta };
                 } catch (err) {
                     this.events.emit(SqsConsumerEvents.s3PayloadError, {
@@ -294,28 +305,24 @@ export class SqsConsumer {
         return rawPayload;
     }
 
-    private async receiveMessages(params: ReceiveMessageRequest): Promise<ReceiveMessageResult> {
-        return await this.sqs.receiveMessage(params).promise();
+    private async receiveMessages(params: ReceiveMessageCommandInput): Promise<ReceiveMessageCommandOutput> {
+        return await this.sqs.receiveMessage(params);
     }
 
     private async deleteMessage(message: Message): Promise<void> {
-        await this.sqs
-            .deleteMessage({
-                QueueUrl: this.queueUrl,
-                ReceiptHandle: message.ReceiptHandle,
-            })
-            .promise();
+        await this.sqs.deleteMessage({
+            QueueUrl: this.queueUrl,
+            ReceiptHandle: message.ReceiptHandle,
+        });
     }
 
     private async deleteBatch(messages: Message[]): Promise<void> {
-        await this.sqs
-            .deleteMessageBatch({
-                QueueUrl: this.queueUrl,
-                Entries: messages.map((message, index) => ({
-                    Id: index.toString(),
-                    ReceiptHandle: message.ReceiptHandle,
-                })),
-            })
-            .promise();
+        await this.sqs.deleteMessageBatch({
+            QueueUrl: this.queueUrl,
+            Entries: messages.map((message, index) => ({
+                Id: index.toString(),
+                ReceiptHandle: message.ReceiptHandle,
+            })),
+        });
     }
 }

@@ -1,5 +1,7 @@
-import * as aws from 'aws-sdk';
-import { PromiseResult } from 'aws-sdk/lib/request';
+import { ServiceException } from '@smithy/smithy-client';
+import { Upload } from '@aws-sdk/lib-storage';
+import { S3 } from '@aws-sdk/client-s3';
+import { PublishCommandOutput, SNS } from '@aws-sdk/client-sns';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from './types';
 import {
@@ -14,8 +16,8 @@ export interface SnsProducerOptions {
     largePayloadThoughS3?: boolean;
     allPayloadThoughS3?: boolean;
     s3Bucket?: string;
-    sns?: aws.SNS;
-    s3?: aws.S3;
+    sns?: SNS;
+    s3?: S3;
     snsEndpointUrl?: string;
     s3EndpointUrl?: string;
     messageSizeThreshold?: number;
@@ -35,8 +37,8 @@ export const DEFAULT_MAX_SNS_MESSAGE_SIZE = 256 * 1024;
 
 export class SnsProducer {
     private topicArn: string;
-    private sns: aws.SNS;
-    private s3: aws.S3;
+    private sns: SNS;
+    private s3: S3;
     private largePayloadThoughS3: boolean;
     private allPayloadThoughS3: boolean;
     private s3Bucket: string;
@@ -47,7 +49,7 @@ export class SnsProducer {
         if (options.sns) {
             this.sns = options.sns;
         } else {
-            this.sns = new aws.SNS({
+            this.sns = new SNS({
                 region: options.region,
                 endpoint: options.snsEndpointUrl,
             });
@@ -62,7 +64,7 @@ export class SnsProducer {
             if (options.s3) {
                 this.s3 = options.s3;
             } else {
-                this.s3 = new aws.S3({
+                this.s3 = new S3({
                     region: options.region,
                     endpoint: options.s3EndpointUrl,
                 });
@@ -88,14 +90,16 @@ export class SnsProducer {
         if ((msgSize > this.messageSizeThreshold && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
             const payloadId = uuid();
             const payloadKey = this.extendedLibraryCompatibility ? payloadId : `${payloadId}.json`;
-            const s3Response = await this.s3
-                .upload({
+            const s3Response = await new Upload({
+                client: this.s3,
+
+                params: {
                     Bucket: this.s3Bucket,
                     Body: messageBody,
                     Key: payloadKey,
                     ContentType: 'application/json',
-                })
-                .promise();
+                },
+            }).done();
 
             const snsResponse = await this.publishS3Payload(
                 {
@@ -117,33 +121,26 @@ export class SnsProducer {
             );
         }
 
-        const snsResponse = await this.sns
-            .publish({
-                Message: messageBody,
-                TopicArn: this.topicArn,
-            })
-            .promise();
+        const snsResponse = await this.sns.publish({
+            Message: messageBody,
+            TopicArn: this.topicArn,
+        });
 
         return {
             snsResponse,
         };
     }
 
-    async publishS3Payload(
-        s3PayloadMeta: S3PayloadMeta,
-        msgSize?: number
-    ): Promise<PromiseResult<aws.SNS.PublishResponse, aws.AWSError>> {
+    async publishS3Payload(s3PayloadMeta: S3PayloadMeta, msgSize?: number): Promise<PublishCommandOutput> {
         const messageAttributes = this.extendedLibraryCompatibility
             ? createExtendedCompatibilityAttributeMap(msgSize)
             : {};
-        return await this.sns
-            .publish({
-                Message: this.extendedLibraryCompatibility
-                    ? buildS3PayloadWithExtendedCompatibility(s3PayloadMeta)
-                    : buildS3Payload(s3PayloadMeta),
-                TopicArn: this.topicArn,
-                MessageAttributes: messageAttributes,
-            })
-            .promise();
+        return this.sns.publish({
+            Message: this.extendedLibraryCompatibility
+                ? buildS3PayloadWithExtendedCompatibility(s3PayloadMeta)
+                : buildS3Payload(s3PayloadMeta),
+            TopicArn: this.topicArn,
+            MessageAttributes: messageAttributes,
+        });
     }
 }
