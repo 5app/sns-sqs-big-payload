@@ -9,15 +9,20 @@ import {
     SqsMessage,
 } from '../src';
 
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
+
 import { S3 } from '@aws-sdk/client-s3';
 import { SNS } from '@aws-sdk/client-sns';
-import { SQS } from '@aws-sdk/client-sqs';
+import { SQS, GetQueueAttributesCommand } from '@aws-sdk/client-sqs';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from '../src/types';
 
 // Real AWS services (for dev testing)
 // const TEST_TOPIC_ARN = 'arn:aws:sns:eu-west-1:731241200085:test-sns-producer';
 // const TEST_REGION = 'eu-west-1';
+process.env.AWS_ACCESS_KEY_ID='test';
+process.env.AWS_SECRET_ACCESS_KEY='test';
+
 
 // Localstack AWS services
 const QUEUE_NAME = 'test-consumer-producer';
@@ -61,12 +66,17 @@ async function initAws() {
         await sqs.createQueue({ QueueName: QUEUE_NAME }),
         await sqs.createQueue({ QueueName: QUEUE_2_NAME }),
     ]);
+
     testQueueUrl = res[1].QueueUrl || 'error';
     testQueue2Url = res[2].QueueUrl || 'error';
+
+    const getQueueAttributesCommand = new GetQueueAttributesCommand({ QueueUrl: testQueueUrl, AttributeNames: ['QueueArn']})
+    const getQueueAttributesResponse = await sqs.send(getQueueAttributesCommand);
+
     await sns.subscribe({
         Protocol: 'sqs',
         TopicArn: TEST_TOPIC_ARN,
-        Endpoint: testQueueUrl,
+        Endpoint: getQueueAttributesResponse?.Attributes?.QueueArn,
     });
 }
 
@@ -187,7 +197,7 @@ async function receiveMessages(
             clearTimeout(timeoutId);
         });
 
-        sqsConsumer.on(SqsConsumerEvents.processingError, () => {
+        sqsConsumer.on(SqsConsumerEvents.processingError, (e) => {
             sqsConsumer.stop();
             clearTimeout(timeoutId);
             resolve([]);

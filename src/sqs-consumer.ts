@@ -276,7 +276,7 @@ export class SqsConsumer {
                         Bucket: s3PayloadMeta.Bucket,
                         Key: s3PayloadMeta.Key,
                     });
-                    return { rawPayload: s3Response.Body, s3PayloadMeta };
+                    return { rawPayload: await s3Response.Body.transformToString(), s3PayloadMeta };
                 } catch (err) {
                     this.events.emit(SqsConsumerEvents.s3PayloadError, {
                         err,

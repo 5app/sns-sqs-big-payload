@@ -1,4 +1,4 @@
-![Build](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build/badge.svg) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![TypeScript](https://badgen.net/npm/types/env-var)](http://www.typescriptlang.org/) [![NPM version](https://img.shields.io/npm/v/sns-sqs-big-payload.svg)](https://www.npmjs.com/package/sns-sqs-big-payload)
+![Build](https://github.com/5app/sns-sqs-big-payload/workflows/Build/badge.svg) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![TypeScript](https://badgen.net/npm/types/env-var)](http://www.typescriptlang.org/) [![NPM version](https://img.shields.io/npm/v/@5app/sns-sqs-big-payload.svg)](https://www.npmjs.com/package/@5app/sns-sqs-big-payload)
 
 # sns-sqs-big-payload
 
@@ -6,7 +6,8 @@ SQS/SNS producer/consumer library. Provides an ability to pass payloads though s
 
 ## Motivation
 
-[Aspecto](https://www.aspecto.io/?utm_source=github&utm_medium=sqs-sns-big-payload&utm_campaign=readme-p1&utm_content=v1) helps modern development teams solve production issues before they evolve. We collect real production data and perform deep API analysis over it to autogenerate tests and monitor services stability. As a result, we often need to handle large payloads which can't be used with SQS & SNS due to the hard size limit. This library was developed to overcome this challenge - it enables you to manage Amazon SNS & SQS message payloads with Amazon S3 when dealing with payloads larger than 256KB. Key functionality includes:
+> From Original Author...
+> [Aspecto](https://www.aspecto.io/?utm_source=github&utm_medium=sqs-sns-big-payload&utm_campaign=readme-p1&utm_content=v1) helps modern development teams solve production issues before they evolve. We collect real production data and perform deep API analysis over it to autogenerate tests and monitor services stability. As a result, we often need to handle large payloads which can't be used with SQS & SNS due to the hard size limit. This library was developed to overcome this challenge - it enables you to manage Amazon SNS & SQS message payloads with Amazon S3 when dealing with payloads larger than 256KB. Key functionality includes:
 
 -   Controlling whether message payloads are always stored in Amazon S3 or only when a message's size exceeds 256KB.
 -   Send a message that references a single message object stored in an Amazon S3 bucket.
@@ -16,12 +17,8 @@ SQS/SNS producer/consumer library. Provides an ability to pass payloads though s
 ## Installation
 
 ```
-npm install sns-sqs-big-payload
+npm install @5app/sns-sqs-big-payload
 ```
-
-Important:
-
-> Make sure you also have `aws-sdk` installed, because it's listed as a peer dependency, so won't be installed automatically.
 
 ## Usage
 
@@ -36,7 +33,7 @@ All 3 clients are under the same repository since they share a similar contract�
 ### SNS Producer
 
 ```ts
-import { SnsProducer } from 'sns-sqs-big-payload';
+import { SnsProducer } from '@5app/sns-sqs-big-payload';
 
 const snsProducer = SnsProducer.create({
     topicArn: '<topic-arn>',
@@ -58,7 +55,7 @@ await snsProducer.sendJSON({
 ### SQS Producer
 
 ```ts
-import { SqsProducer } from 'sns-sqs-big-payload';
+import { SqsProducer } from '@5app/sns-sqs-big-payload';
 
 const sqsProducer = SqsProducer.create({
     queueUrl: '...',
@@ -80,7 +77,7 @@ await sqsProducer.sendJSON({
 ### SQS Consumer
 
 ```ts
-import { SqsConsumer, SqsConsumerEvents } from 'sns-sqs-big-payload';
+import { SqsConsumer, SqsConsumerEvents } from '@5app/sns-sqs-big-payload';
 
 const sqsConsumer = SqsConsumer.create({
     queueUrl: '...',
@@ -149,7 +146,7 @@ export AWS_ACCESS_KEY_ID=...
 If you need to specify your credentials manually, you can use a pre-configured instance of the [AWS SQS](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SQS.html) client:
 
 ```ts
-import { SqsConsumer } from 'sns-sqs-big-payload';
+import { SqsConsumer } from '@5app/sns-sqs-big-payload';
 import * as aws from 'aws-sdk';
 
 aws.config.update({
@@ -224,7 +221,7 @@ Since this library heavily relies on AWS APIs, it is less relevant to run an iso
 To run localstack on mac:
 
 ```sh
-TMPDIR=/private$TMPDIR docker-compose up
+TMPDIR=/private$TMPDIR docker compose up
 ```
 
 To run unit tests:

@@ -1,6 +1,7 @@
 {
+    "extends": "@tsconfig/node22/tsconfig.json",
     "compilerOptions": {
-        "target": "ES2017",
+        "target": "esnext",
         "lib": ["ES2017"],
         "rootDir": "./src",
         "outDir": "dist",

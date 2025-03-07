@@ -1,34 +1,34 @@
 #!/usr/bin/env node
-const http = require('http');
-
 let timeoutFired = false;
 
-const urlReady = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-        timeoutFired = true;
-        reject(new Error('Timeout'));
-    }, 60000);
-
-    getUrl(timeout, resolve, reject);
-});
-
-function getUrl(timeoutId, resolve, reject) {
+try {
+    await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            timeoutFired = true;
+            reject(new Error('Timeout'));
+        }, 60000);
+    
+        getUrl(timeout, resolve, reject);
+    });
+    console.log('done');
+    process.exit(0);
+}
+catch (err) {
+    console.error(err);
+    process.exit(1);
+}
+async function getUrl(timeoutId, resolve, reject) {
     const url = process.argv[2];
-    http.get(url, (resp) => {
-        resp.on('data', () => {
-            clearTimeout(timeoutId);
-            resolve();
-        });
-    }).on('error', (err) => {
+    console.log(`Checking ${url}`);
+    try {
+        await fetch(url);
+        resolve();
+    }
+    catch (err) {
         if (timeoutFired) {
-            reject();
+            reject(err);
             return;
         }
         setTimeout(() => getUrl(timeoutId, resolve, reject), 1000);
-    });
+    }
 }
-
-urlReady.catch((err) => {
-    console.log(err);
-    process.exit(1);
-});
