@@ -9,7 +9,7 @@ import {
     SqsMessage,
 } from '../src';
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, jest } from '@jest/globals';
 
 import { S3 } from '@aws-sdk/client-s3';
 import { SNS } from '@aws-sdk/client-sns';
@@ -36,7 +36,7 @@ const TEST_ENDPOINTS = {
     snsEndpointUrl: 'http://localhost:4566',
     s3EndpointUrl: 'http://localhost:4566',
 };
-const TEST_BUCKET_NAME = 'aspecto-message-payload';
+const TEST_BUCKET_NAME = 'message-payload';
 
 function getClients() {
     const sns = new SNS({
