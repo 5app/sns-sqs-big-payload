@@ -35,7 +35,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/5app/sns-sqs-big-payload"
+		"url": "git+https://github.com/5app/sns-sqs-big-payload.git"
 	},
 	"bugs": {
 		"url": "https://github.com/5app/sns-sqs-big-payload/issues"
@@ -61,6 +61,9 @@
 		},
 		"testEnvironment": "node",
 		"maxConcurrency": 1
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"prettier": "@5app/prettier-config",
 	"release": {
