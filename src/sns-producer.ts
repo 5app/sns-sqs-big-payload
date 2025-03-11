@@ -2,7 +2,7 @@ import {Upload} from '@aws-sdk/lib-storage';
 import {S3} from '@aws-sdk/client-s3';
 import {PublishCommandOutput, SNS} from '@aws-sdk/client-sns';
 import {randomUUID as uuid} from 'node:crypto';
-import {S3PayloadMeta} from './types';
+import type {S3PayloadMeta} from './types';
 import {
 	buildS3PayloadWithExtendedCompatibility,
 	buildS3Payload,

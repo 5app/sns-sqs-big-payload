@@ -1,5 +1,5 @@
 import {type SendMessageRequest} from '@aws-sdk/client-sqs';
-import {S3PayloadMeta, PayloadMeta, SqsExtendedPayloadMeta} from './types';
+import type {S3PayloadMeta, PayloadMeta, SqsExtendedPayloadMeta} from './types';
 import {
 	AMAZON_EXTENDED_CLIENT_PAYLOAD_OFFLOADING_REFERENCE,
 	SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE,

@@ -11,12 +11,12 @@
 	"scripts": {
 		"test": "jest",
 		"build": "node --run clean && tsc",
+		"bundle": "tsup src/index.ts --dts --format esm",
 		"lint": "prettier --check .",
 		"clean": "rm -rf ./dist/*",
-		"prepublishOnly": "node --run build"
+		"prepublishOnly": "node --run bundle"
 	},
 	"dependencies": {
-		"@5app/prettier-config": "^1.0.4",
 		"@aws-sdk/client-s3": "^3.758.0",
 		"@aws-sdk/client-sns": "^3.758.0",
 		"@aws-sdk/client-sqs": "^3.758.0",
@@ -24,6 +24,7 @@
 		"@smithy/smithy-client": "^4.1.6"
 	},
 	"devDependencies": {
+		"@5app/prettier-config": "^1.0.4",
 		"@5app/semantic-release-config": "^1.1.0",
 		"@tsconfig/node22": "^22.0.0",
 		"@types/jest": "^29.5.14",
@@ -31,6 +32,7 @@
 		"jest": "^29.7.0",
 		"prettier": "^3.5.3",
 		"ts-jest": "^29.2.6",
+		"tsup": "^8.4.0",
 		"typescript": "^5.8.2"
 	},
 	"repository": {

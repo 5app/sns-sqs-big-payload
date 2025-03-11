@@ -4,7 +4,7 @@ SQSConsumer can also be used to process messages directly, w/o polling part. Thi
 For example:
 
 ```ts
-import {SqsConsumer, SqsConsumerEvents} from 'sns-sqs-big-payload';
+import {SqsConsumer, SqsConsumerEvents} from '@5app/sns-sqs-big-payload';
 
 const sqsConsumer = SqsConsumer.create({
 	// no need to specify the queue url for the lambda use case

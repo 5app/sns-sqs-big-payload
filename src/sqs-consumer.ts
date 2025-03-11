@@ -7,8 +7,8 @@ import {
 	ReceiveMessageCommandOutput,
 	SQS,
 } from '@aws-sdk/client-sqs';
-import {EventEmitter} from 'events';
-import {PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta} from './types';
+import {EventEmitter} from 'node:events';
+import type {PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta} from './types';
 import {SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE} from './constants';
 
 export interface SqsConsumerOptions {
