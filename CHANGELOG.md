@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.1...v1.0.2) (2025-03-11)
+
+
+### Bug Fixes
+
+* **ts:** export correct definitions ([5ac721c](https://github.com/5app/sns-sqs-big-payload/commit/5ac721c525e9a605442a29e35cb7fdb9309e960f))
+
 ## [1.0.1](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.0...v1.0.1) (2025-03-11)
 
 
