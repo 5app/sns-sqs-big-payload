@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.0...v1.0.1) (2025-03-11)
+
+
+### Bug Fixes
+
+* **ci:** fix npm deployment ([c8b7125](https://github.com/5app/sns-sqs-big-payload/commit/c8b71253fd09b450bc38ef6db2156ec56cd4df4d))
+
 # 1.0.0 (2025-03-11)
 
 
