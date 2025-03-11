@@ -5,6 +5,9 @@
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"test": "jest",
 		"build": "node --run clean && tsc",
@@ -18,10 +21,10 @@
 		"@aws-sdk/client-sns": "^3.758.0",
 		"@aws-sdk/client-sqs": "^3.758.0",
 		"@aws-sdk/lib-storage": "^3.758.0",
-		"@smithy/smithy-client": "^4.1.6",
-		"uuid": "^11.1.0"
+		"@smithy/smithy-client": "^4.1.6"
 	},
 	"devDependencies": {
+		"@5app/semantic-release-config": "^1.1.0",
 		"@tsconfig/node22": "^22.0.0",
 		"@types/jest": "^29.5.14",
 		"@types/node": "^22.13.9",
@@ -60,6 +63,9 @@
 		"maxConcurrency": 1
 	},
 	"prettier": "@5app/prettier-config",
+	"release": {
+		"extends": "@5app/semantic-release-config"
+	},
 	"keywords": [
 		"sqs",
 		"sns",

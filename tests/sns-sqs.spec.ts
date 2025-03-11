@@ -22,7 +22,7 @@ import {
 import {S3} from '@aws-sdk/client-s3';
 import {SNS} from '@aws-sdk/client-sns';
 import {SQS, GetQueueAttributesCommand} from '@aws-sdk/client-sqs';
-import {v4 as uuid} from 'uuid';
+import {randomUUID as uuid} from 'node:crypto';
 import {S3PayloadMeta} from '../src/types';
 
 // Real AWS services (for dev testing)

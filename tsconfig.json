@@ -5,7 +5,7 @@
 		"lib": ["ES2017"],
 		"rootDir": "./src",
 		"outDir": "dist",
-		"module": "commonjs",
+		"module": "ESNext",
 		"moduleResolution": "node",
 		"strict": false,
 		"declaration": true,
