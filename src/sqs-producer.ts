@@ -1,6 +1,6 @@
 import {Upload} from '@aws-sdk/lib-storage';
 import {S3} from '@aws-sdk/client-s3';
-import {SendMessageCommandOutput, SQS} from '@aws-sdk/client-sqs';
+import {type SendMessageCommandOutput, SQS} from '@aws-sdk/client-sqs';
 import {randomUUID as uuid} from 'node:crypto';
 import type {S3PayloadMeta} from './types';
 import {
