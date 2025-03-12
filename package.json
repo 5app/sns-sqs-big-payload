@@ -16,16 +16,10 @@
 		"clean": "rm -rf ./dist/*",
 		"prepublishOnly": "node --run bundle"
 	},
-	"dependencies": {
-		"@aws-sdk/client-s3": "^3.758.0",
-		"@aws-sdk/client-sns": "^3.758.0",
-		"@aws-sdk/client-sqs": "^3.758.0",
-		"@aws-sdk/lib-storage": "^3.758.0",
-		"@smithy/smithy-client": "^4.1.6"
-	},
 	"devDependencies": {
 		"@5app/prettier-config": "^1.0.4",
 		"@5app/semantic-release-config": "^1.1.0",
+		"@smithy/smithy-client": "^4.1.6",
 		"@tsconfig/node22": "^22.0.0",
 		"@types/jest": "^29.5.14",
 		"@types/node": "^22.13.9",
@@ -34,6 +28,12 @@
 		"ts-jest": "^29.2.6",
 		"tsup": "^8.4.0",
 		"typescript": "^5.8.2"
+	},
+	"peerDependencies": {
+		"@aws-sdk/client-s3": "^3.758.0",
+		"@aws-sdk/client-sns": "^3.758.0",
+		"@aws-sdk/client-sqs": "^3.758.0",
+		"@aws-sdk/lib-storage": "^3.758.0"
 	},
 	"repository": {
 		"type": "git",
