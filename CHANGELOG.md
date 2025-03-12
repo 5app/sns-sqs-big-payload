@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.2...v1.0.3) (2025-03-12)
+
+
+### Performance Improvements
+
+* **npm:** refer to @aws-sdk/* as peer dependencies ([#2](https://github.com/5app/sns-sqs-big-payload/issues/2)) ([6525348](https://github.com/5app/sns-sqs-big-payload/commit/652534816b95fd844f8a6c6ca24dd57cd7c04d24))
+
 ## [1.0.2](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.1...v1.0.2) (2025-03-11)
 
 
