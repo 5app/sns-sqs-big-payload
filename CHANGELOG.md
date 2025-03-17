@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.3...v1.1.0) (2025-03-17)
+
+
+### Features
+
+* **s3-key-prefix:** option.s3KeyPrefix default 'queue-big-payload' ([#3](https://github.com/5app/sns-sqs-big-payload/issues/3)) ([fdab1d5](https://github.com/5app/sns-sqs-big-payload/commit/fdab1d51ecaf2b1f35a7057e5d56ab65e8023223))
+
 ## [1.0.3](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.2...v1.0.3) (2025-03-12)
 
 
