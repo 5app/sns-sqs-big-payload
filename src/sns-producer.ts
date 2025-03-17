@@ -15,6 +15,7 @@ export interface SnsProducerOptions {
 	largePayloadThoughS3?: boolean;
 	allPayloadThoughS3?: boolean;
 	s3Bucket?: string;
+	s3KeyPrefix?: string;
 	sns?: SNS;
 	s3?: S3;
 	snsEndpointUrl?: string;
@@ -41,18 +42,18 @@ export class SnsProducer {
 	private largePayloadThoughS3: boolean;
 	private allPayloadThoughS3: boolean;
 	private s3Bucket: string;
+	private s3KeyPrefix: string;
 	private messageSizeThreshold: number;
 	private extendedLibraryCompatibility: boolean;
 
 	constructor(options: SnsProducerOptions) {
-		if (options.sns) {
-			this.sns = options.sns;
-		} else {
-			this.sns = new SNS({
+		this.sns =
+			options.sns ||
+			new SNS({
 				region: options.region,
 				endpoint: options.snsEndpointUrl,
 			});
-		}
+
 		if (options.allPayloadThoughS3 || options.largePayloadThoughS3) {
 			if (!options.s3Bucket) {
 				throw new Error(
@@ -74,6 +75,7 @@ export class SnsProducer {
 		this.largePayloadThoughS3 = options.largePayloadThoughS3;
 		this.allPayloadThoughS3 = options.allPayloadThoughS3;
 		this.s3Bucket = options.s3Bucket;
+		this.s3KeyPrefix = options.s3KeyPrefix || 'queue-big-payload/';
 		this.messageSizeThreshold =
 			options.messageSizeThreshold ?? DEFAULT_MAX_SNS_MESSAGE_SIZE;
 		this.extendedLibraryCompatibility =
@@ -94,9 +96,10 @@ export class SnsProducer {
 			this.allPayloadThoughS3
 		) {
 			const payloadId = uuid();
-			const payloadKey = this.extendedLibraryCompatibility
-				? payloadId
-				: `${payloadId}.json`;
+			const payloadKey =
+				this.s3KeyPrefix + this.extendedLibraryCompatibility
+					? payloadId
+					: `${payloadId}.json`;
 			const s3Response = await new Upload({
 				client: this.s3,
 

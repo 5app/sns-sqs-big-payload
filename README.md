@@ -67,6 +67,7 @@ const sqsProducer = SqsProducer.create({
 	// see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
 	extendedLibraryCompatibility: boolean,
 	s3Bucket: '...',
+	s3KeyPrefix: 'queue-big-payload/', // (default)
 });
 
 await sqsProducer.sendJSON({
