@@ -18,6 +18,7 @@ export interface SqsProducerOptions {
 	largePayloadThoughS3?: boolean;
 	allPayloadThoughS3?: boolean;
 	s3Bucket?: string;
+	s3KeyPrefix?: string;
 	sqs?: SQS;
 	s3?: S3;
 	sqsEndpointUrl?: string;
@@ -41,18 +42,18 @@ export class SqsProducer {
 	private largePayloadThoughS3: boolean;
 	private allPayloadThoughS3: boolean;
 	private s3Bucket: string;
+	private s3KeyPrefix: string;
 	private messageSizeThreshold: number;
 	private extendedLibraryCompatibility: boolean;
 
 	constructor(options: SqsProducerOptions) {
-		if (options.sqs) {
-			this.sqs = options.sqs;
-		} else {
-			this.sqs = new SQS({
+		this.sqs =
+			options.sqs ||
+			new SQS({
 				region: options.region,
 				endpoint: options.sqsEndpointUrl,
 			});
-		}
+
 		if (options.largePayloadThoughS3 || options.allPayloadThoughS3) {
 			if (!options.s3Bucket) {
 				throw new Error(
@@ -73,6 +74,7 @@ export class SqsProducer {
 		this.largePayloadThoughS3 = options.largePayloadThoughS3;
 		this.allPayloadThoughS3 = options.allPayloadThoughS3;
 		this.s3Bucket = options.s3Bucket;
+		this.s3KeyPrefix = options.s3KeyPrefix || 'queue-big-payload/';
 		this.messageSizeThreshold =
 			options.messageSizeThreshold ?? DEFAULT_MAX_SQS_MESSAGE_SIZE;
 		this.extendedLibraryCompatibility =
@@ -96,9 +98,10 @@ export class SqsProducer {
 			this.allPayloadThoughS3
 		) {
 			const payloadId = uuid();
-			const payloadKey = this.extendedLibraryCompatibility
-				? payloadId
-				: `${payloadId}.json`;
+			const payloadKey =
+				this.s3KeyPrefix + this.extendedLibraryCompatibility
+					? payloadId
+					: `${payloadId}.json`;
 			const s3Response = await new Upload({
 				client: this.s3,
 
