@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/5app/sns-sqs-big-payload/compare/v1.1.0...v1.1.1) (2025-04-02)
+
+
+### Bug Fixes
+
+* **s3:** key prefix ([34c8857](https://github.com/5app/sns-sqs-big-payload/commit/34c88578392d80e0b9dbe3a72420c83f9b46f7eb))
+
 # [1.1.0](https://github.com/5app/sns-sqs-big-payload/compare/v1.0.3...v1.1.0) (2025-03-17)
 
 
