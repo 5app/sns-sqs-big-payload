@@ -99,9 +99,9 @@ export class SqsProducer {
 		) {
 			const payloadId = uuid();
 			const payloadKey =
-				this.s3KeyPrefix + this.extendedLibraryCompatibility
-					? payloadId
-					: `${payloadId}.json`;
+				this.s3KeyPrefix +
+				payloadId +
+				(this.extendedLibraryCompatibility ? '' : '.json');
 			const s3Response = await new Upload({
 				client: this.s3,
 
