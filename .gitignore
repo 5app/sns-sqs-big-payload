@@ -3,6 +3,3 @@ dist
 .DS_Store
 .idea
 .vscode
-yarn-error.log
-package-lock.json
-aspecto.log

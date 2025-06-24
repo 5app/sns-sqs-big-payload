@@ -1,66 +1,83 @@
 {
-    "name": "sns-sqs-big-payload",
-    "version": "0.1.4",
-    "license": "Apache-2.0",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "scripts": {
-        "test": "jest",
-        "build": "yarn clean && tsc",
-        "clean": "rm -rf ./dist/*",
-        "prepublishOnly": "yarn build"
-    },
-    "dependencies": {
-        "@aws-sdk/client-s3": "^3.591.0",
-        "@aws-sdk/client-sns": "^3.590.0",
-        "@aws-sdk/client-sqs": "^3.590.0",
-        "@aws-sdk/lib-storage": "^3.591.0",
-        "@smithy/smithy-client": "^3.1.1",
-        "uuid": "^7.0.2"
-    },
-    "devDependencies": {
-        "@types/jest": "^29.4.0",
-        "@types/node": "^13.13.52",
-        "jest": "^29.7.0",
-        "ts-jest": "^29.0.5",
-        "typescript": "4.4.4"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/aspecto-io/sns-sqs-big-payload"
-    },
-    "bugs": {
-        "url": "https://github.com/aspecto-io/sns-sqs-big-payload/issues"
-    },
-    "homepage": "https://github.com/aspecto-io/sns-sqs-big-payload",
-    "prepublish": "tsc",
-    "jest": {
-        "preset": "ts-jest",
-        "testMatch": [
-            "**/tests/**/*.spec.+(ts|tsx|js)"
-        ],
-        "globals": {
-            "ts-jest": {
-                "diagnostics": false
-            }
-        },
-        "moduleFileExtensions": [
-            "ts",
-            "js"
-        ],
-        "transform": {
-            "^.+\\.(ts)$": "ts-jest"
-        },
-        "testEnvironment": "node",
-        "maxConcurrency": 1
-    },
-    "keywords": [
-        "sqs",
-        "sns",
-        "queue",
-        "consumer",
-        "large",
-        "big",
-        "payload"
-    ]
+	"name": "@5app/sns-sqs-big-payload",
+	"version": "1.1.1",
+	"license": "Apache-2.0",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"test": "jest",
+		"build": "node --run clean && tsc",
+		"bundle": "tsup src/index.ts --dts --format esm",
+		"lint": "prettier --check .",
+		"clean": "rm -rf ./dist/*",
+		"prepublishOnly": "node --run bundle"
+	},
+	"devDependencies": {
+		"@5app/prettier-config": "^1.0.4",
+		"@5app/semantic-release-config": "^1.1.0",
+		"@smithy/smithy-client": "^4.1.6",
+		"@tsconfig/node22": "^22.0.0",
+		"@types/jest": "^29.5.14",
+		"@types/node": "^22.13.9",
+		"jest": "^29.7.0",
+		"prettier": "^3.5.3",
+		"ts-jest": "^29.2.6",
+		"tsup": "^8.4.0",
+		"typescript": "^5.8.2"
+	},
+	"peerDependencies": {
+		"@aws-sdk/client-s3": "^3.758.0",
+		"@aws-sdk/client-sns": "^3.758.0",
+		"@aws-sdk/client-sqs": "^3.758.0",
+		"@aws-sdk/lib-storage": "^3.758.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/5app/sns-sqs-big-payload.git"
+	},
+	"bugs": {
+		"url": "https://github.com/5app/sns-sqs-big-payload/issues"
+	},
+	"homepage": "https://github.com/5app/sns-sqs-big-payload",
+	"prepublish": "tsc",
+	"jest": {
+		"preset": "ts-jest",
+		"testMatch": [
+			"**/tests/**/*.spec.+(ts|tsx|js)"
+		],
+		"globals": {
+			"ts-jest": {
+				"diagnostics": false
+			}
+		},
+		"moduleFileExtensions": [
+			"ts",
+			"js"
+		],
+		"transform": {
+			"^.+\\.(ts)$": "ts-jest"
+		},
+		"testEnvironment": "node",
+		"maxConcurrency": 1
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"prettier": "@5app/prettier-config",
+	"release": {
+		"extends": "@5app/semantic-release-config"
+	},
+	"keywords": [
+		"sqs",
+		"sns",
+		"queue",
+		"consumer",
+		"large",
+		"big",
+		"payload"
+	]
 }

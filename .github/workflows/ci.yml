@@ -1,0 +1,49 @@
+name: CI
+on: [push]
+
+jobs:
+    audit:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 'lts/*'
+            - run: npm audit
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 'lts/*'
+            - run: npm i
+            - run: node --run lint
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 'lts/*'
+            - run: npm install
+            - run: node --run build
+            - run: docker compose build
+            - run: docker compose up -d
+            - name: wait for localstack
+              run: ./scripts/wait-for-url.js http://localhost:4566 && sleep 5
+            - run: node --run test
+    deploy:
+        runs-on: ubuntu-latest
+        needs: [test, lint, audit]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 'lts/*'
+            - run: npm install
+            - name: Semantic Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: npx semantic-release
