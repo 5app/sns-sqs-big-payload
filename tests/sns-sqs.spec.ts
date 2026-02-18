@@ -21,11 +21,11 @@ import {
 
 jest.retryTimes(3);
 
-import { S3 } from '@aws-sdk/client-s3';
-import { SNS } from '@aws-sdk/client-sns';
-import { SQS, GetQueueAttributesCommand } from '@aws-sdk/client-sqs';
-import { randomUUID as uuid } from 'node:crypto';
-import { S3PayloadMeta } from '../src/types';
+import {S3} from '@aws-sdk/client-s3';
+import {SNS} from '@aws-sdk/client-sns';
+import {SQS, GetQueueAttributesCommand} from '@aws-sdk/client-sqs';
+import {randomUUID as uuid} from 'node:crypto';
+import {S3PayloadMeta} from '../src/types';
 
 // Real AWS services (for dev testing)
 // const TEST_TOPIC_ARN = 'arn:aws:sns:eu-west-1:731241200085:test-sns-producer';
@@ -66,14 +66,14 @@ function getClients() {
 		forcePathStyle: true,
 	});
 
-	return { sns, sqs, s3 };
+	return {sns, sqs, s3};
 }
 async function initAws() {
-	const { sns, sqs } = getClients();
+	const {sns, sqs} = getClients();
 	const res = await Promise.all([
-		await sns.createTopic({ Name: 'test-sns-producer' }),
-		await sqs.createQueue({ QueueName: QUEUE_NAME }),
-		await sqs.createQueue({ QueueName: QUEUE_2_NAME }),
+		await sns.createTopic({Name: 'test-sns-producer'}),
+		await sqs.createQueue({QueueName: QUEUE_NAME}),
+		await sqs.createQueue({QueueName: QUEUE_2_NAME}),
 	]);
 
 	testQueueUrl = res[1].QueueUrl || 'error';
@@ -95,16 +95,16 @@ async function initAws() {
 }
 
 async function cleanAws() {
-	const { sns, sqs } = getClients();
+	const {sns, sqs} = getClients();
 	await Promise.all([
-		sns.deleteTopic({ TopicArn: TEST_TOPIC_ARN }),
-		sqs.deleteQueue({ QueueUrl: testQueueUrl }),
-		sqs.deleteQueue({ QueueUrl: testQueue2Url }),
+		sns.deleteTopic({TopicArn: TEST_TOPIC_ARN}),
+		sqs.deleteQueue({QueueUrl: testQueueUrl}),
+		sqs.deleteQueue({QueueUrl: testQueue2Url}),
 	]);
 }
 
 const getSqsProducer = (options: Partial<SqsProducerOptions> = {}) => {
-	const { s3 } = getClients();
+	const {s3} = getClients();
 	return SqsProducer.create({
 		queueUrl: testQueueUrl,
 		region: TEST_REGION,
@@ -134,7 +134,7 @@ async function sendMessageInCompatibilityFormat(
 	generateMessageTemplate?: (s3BucketName: string, s3Key: string) => string
 ) {
 	const s3ObjectKey = uuid();
-	const { s3, sqs } = getClients();
+	const {s3, sqs} = getClients();
 	const s3Response = await s3.putObject({
 		Bucket: options.s3Bucket,
 		Key: s3ObjectKey,
@@ -154,11 +154,11 @@ async function sendMessageInCompatibilityFormat(
 			},
 		},
 	});
-	return { s3Response, sqsResponse, s3ObjectKey };
+	return {s3Response, sqsResponse, s3ObjectKey};
 }
 
 const getSnsProducer = (options: Partial<SnsProducerOptions> = {}) => {
-	const { s3 } = getClients();
+	const {s3} = getClients();
 	return SnsProducer.create({
 		topicArn: TEST_TOPIC_ARN,
 		region: TEST_REGION,
@@ -187,7 +187,7 @@ async function receiveMessages(
 	options: Partial<SqsConsumerOptions> = {},
 	eventHandlers?: Record<string | symbol, (...args) => void>
 ): Promise<SqsMessage[]> {
-	const { s3 } = getClients();
+	const {s3} = getClients();
 	return new Promise((resolve, rej) => {
 		const messages: SqsMessage[] = [];
 		let timeoutId;
@@ -250,7 +250,7 @@ async function receiveMessages(
 
 describe('sns-sqs-big-payload', () => {
 	beforeAll(async () => {
-		const { s3 } = getClients();
+		const {s3} = getClients();
 		await s3.createBucket({
 			Bucket: TEST_BUCKET_NAME,
 			ACL: 'public-read',
@@ -268,7 +268,7 @@ describe('sns-sqs-big-payload', () => {
 	describe('SQS producer-consumer', () => {
 		describe('sending simple messages', () => {
 			it('should send and receive the message', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await sendMessage(message);
 				const [receivedMessage] = await receiveMessages(1);
 				expect(receivedMessage.payload).toEqual(message);
@@ -288,7 +288,7 @@ describe('sns-sqs-big-payload', () => {
 			}
 
 			it('should trigger success events event', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				const handlers = getEventHandlers();
 				await sendMessage(message);
 				const [receivedMessage] = await receiveMessages(
@@ -332,7 +332,7 @@ describe('sns-sqs-big-payload', () => {
 			});
 
 			it('should trigger processingError event', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				const handlers = getEventHandlers();
 				await sendMessage(message);
 				await receiveMessages(
@@ -375,7 +375,7 @@ describe('sns-sqs-big-payload', () => {
 				) => {
 					const messageSizeThreshold = 1024;
 					const message = 'x'.repeat(messageSizeThreshold + 1);
-					const { s3ObjectKey } =
+					const {s3ObjectKey} =
 						await sendMessageInCompatibilityFormat(
 							JSON.stringify(message),
 							{
@@ -581,7 +581,7 @@ describe('sns-sqs-big-payload', () => {
 				});
 
 				it.only('should extend message visability', async () => {
-					const message = { it: 'works' };
+					const message = {it: 'works'};
 					const handlers = getEventHandlers();
 					await sendMessage(message);
 					const [receivedMessage] = await receiveMessages(
@@ -591,20 +591,24 @@ describe('sns-sqs-big-payload', () => {
 							messageVisabilityTimeout: 10,
 							messageVisabilityInterval: 2,
 							handleMessage: async () => {
-								await new Promise(resolve => setTimeout(resolve, 4000));
+								await new Promise(resolve =>
+									setTimeout(resolve, 4000)
+								);
 							},
 						},
 						handlers
 					);
 					// success
-					expect(handlers[SqsConsumerEvents.messageVisibilityChanged]).toHaveBeenCalledTimes(2);
+					expect(
+						handlers[SqsConsumerEvents.messageVisibilityChanged]
+					).toHaveBeenCalledTimes(2);
 				});
 			});
 		});
 
 		describe('sending message through s3', () => {
 			it('should send all message though s3 if configured', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await sendMessage(message, {
 					allPayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
@@ -634,7 +638,7 @@ describe('sns-sqs-big-payload', () => {
 			it('should send messages larger than messageSizeThreshold through s3', async () => {
 				const messageSizeThreshold = 1024;
 				const message = 'x'.repeat(messageSizeThreshold + 1);
-				const { s3Response } = await sendMessage(message, {
+				const {s3Response} = await sendMessage(message, {
 					largePayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
 					messageSizeThreshold,
@@ -650,7 +654,7 @@ describe('sns-sqs-big-payload', () => {
 				it('should send messages through s3', async () => {
 					const messageSizeThreshold = 512;
 					const message = 'x'.repeat(messageSizeThreshold + 1);
-					const { s3Response } = await sendMessage(message, {
+					const {s3Response} = await sendMessage(message, {
 						largePayloadThoughS3: true,
 						s3Bucket: TEST_BUCKET_NAME,
 						messageSizeThreshold,
@@ -667,7 +671,7 @@ describe('sns-sqs-big-payload', () => {
 				it('should not send messages smaller than messageSizeThreshold through s3', async () => {
 					const messageSizeThreshold = 512;
 					const message = 'x'.repeat(messageSizeThreshold - 5);
-					const { s3Response } = await sendMessage(message, {
+					const {s3Response} = await sendMessage(message, {
 						largePayloadThoughS3: true,
 						s3Bucket: TEST_BUCKET_NAME,
 						messageSizeThreshold,
@@ -685,7 +689,7 @@ describe('sns-sqs-big-payload', () => {
 				it('should produce messages in AWS client lib JSON format', async () => {
 					const messageSizeThreshold = 1024;
 					const message = 'x'.repeat(messageSizeThreshold + 1);
-					const { s3Response } = await sendMessage(message, {
+					const {s3Response} = await sendMessage(message, {
 						largePayloadThoughS3: true,
 						s3Bucket: TEST_BUCKET_NAME,
 						messageSizeThreshold,
@@ -700,7 +704,7 @@ describe('sns-sqs-big-payload', () => {
 						JSON.parse(receivedMessage.message.Body || 'error')
 					).toEqual([
 						'software.amazon.payloadoffloading.PayloadS3Pointer',
-						{ s3BucketName: TEST_BUCKET_NAME, s3Key: s3Response.Key },
+						{s3BucketName: TEST_BUCKET_NAME, s3Key: s3Response.Key},
 					]);
 				});
 
@@ -708,7 +712,7 @@ describe('sns-sqs-big-payload', () => {
 					const messageSizeThreshold = 1024;
 					const message = 'x'.repeat(messageSizeThreshold + 1);
 					const {
-						sqsResponse: { MessageId },
+						sqsResponse: {MessageId},
 					} = await sendMessageInCompatibilityFormat(
 						JSON.stringify(message),
 						{
@@ -732,7 +736,7 @@ describe('sns-sqs-big-payload', () => {
 				// payload is calculated based on the stringify representation of the message,
 				// which includes the '"' chars
 				const message = 'x'.repeat(messageSizeThreshold - 3);
-				const { s3Response } = await sendMessage(message, {
+				const {s3Response} = await sendMessage(message, {
 					largePayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
 					messageSizeThreshold,
@@ -746,7 +750,7 @@ describe('sns-sqs-big-payload', () => {
 			});
 
 			it('should resend message into other queue with s3 payload', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await sendMessage(message, {
 					allPayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
@@ -771,16 +775,16 @@ describe('sns-sqs-big-payload', () => {
 		describe('sending multiple messages', () => {
 			it('should receive all the messages that have been sent', async () => {
 				await Promise.all([
-					sendMessage({ one: 'one' }),
-					sendMessage({ two: 'two' }),
-					sendMessage({ three: 'three' }),
+					sendMessage({one: 'one'}),
+					sendMessage({two: 'two'}),
+					sendMessage({three: 'three'}),
 				]);
 				const messages = await receiveMessages(3);
 				const messagesPayloads = messages.map(m => m.payload);
 				// order is not guaranteed, so just checking if the message is present
-				expect(messagesPayloads).toContainEqual({ one: 'one' });
-				expect(messagesPayloads).toContainEqual({ two: 'two' });
-				expect(messagesPayloads).toContainEqual({ three: 'three' });
+				expect(messagesPayloads).toContainEqual({one: 'one'});
+				expect(messagesPayloads).toContainEqual({two: 'two'});
+				expect(messagesPayloads).toContainEqual({three: 'three'});
 			});
 		});
 	});
@@ -789,7 +793,7 @@ describe('sns-sqs-big-payload', () => {
 	describe('SNS producer - SQS consumer', () => {
 		describe('publishing simple messages', () => {
 			it('should publish and receive the message', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await publishMessage(message);
 				const [receivedMessage] = await receiveMessages(1, {
 					transformMessageBody: body => {
@@ -803,7 +807,7 @@ describe('sns-sqs-big-payload', () => {
 
 		describe('publishing message through s3', () => {
 			it('should send payload though s3 if configured - for all messages', async () => {
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await publishMessage(message, {
 					allPayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
@@ -822,7 +826,7 @@ describe('sns-sqs-big-payload', () => {
 			it('publish to sns with payload already in s3', async () => {
 				// publish message to queue 2, read it with s3 metadata,
 				// then send it to sns with s3 payload and read it from queue 1
-				const message = { it: 'works' };
+				const message = {it: 'works'};
 				await sendMessage(message, {
 					allPayloadThoughS3: true,
 					s3Bucket: TEST_BUCKET_NAME,
