@@ -580,16 +580,16 @@ describe('sns-sqs-big-payload', () => {
 					});
 				});
 
-				it.only('should extend message visability', async () => {
+				it('should extend message visibility', async () => {
 					const message = {it: 'works'};
 					const handlers = getEventHandlers();
 					await sendMessage(message);
 					const [receivedMessage] = await receiveMessages(
 						1,
 						{
-							extendMessageVisability: true,
-							messageVisabilityTimeout: 10,
-							messageVisabilityInterval: 2,
+							extendMessageVisibility: true,
+							messageVisibilityTimeout: 10,
+							messageVisibilityInterval: 2,
 							handleMessage: async () => {
 								await new Promise(resolve =>
 									setTimeout(resolve, 4000)
