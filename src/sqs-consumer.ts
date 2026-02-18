@@ -1,15 +1,16 @@
-import {type ServiceException} from '@smithy/smithy-client';
-import {S3} from '@aws-sdk/client-s3';
+import { type ServiceException } from '@smithy/smithy-client';
+import { S3 } from '@aws-sdk/client-s3';
 import {
 	Message,
 	MessageAttributeValue,
 	ReceiveMessageCommandInput,
 	ReceiveMessageCommandOutput,
+	ChangeMessageVisibilityCommand,
 	SQS,
 } from '@aws-sdk/client-sqs';
-import {EventEmitter} from 'node:events';
-import type {PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta} from './types';
-import {SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE} from './constants';
+import { EventEmitter } from 'node:events';
+import type { PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta } from './types';
+import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './constants';
 
 export interface SqsConsumerOptions {
 	queueUrl: string;
@@ -28,6 +29,11 @@ export interface SqsConsumerOptions {
 	// Opt-in to enable compatibility with
 	// Amazon SQS Extended Client Java Library (and other compatible libraries)
 	extendedLibraryCompatibility?: boolean;
+	// Opt-in to enable extending message visability timeouts for long running message processing
+	extendMessageVisability?: boolean;
+	messageVisabilityTimeout?: number;
+	messageVisabilityInterval?: number;
+
 }
 
 export interface ProcessingOptions {
@@ -48,6 +54,8 @@ export enum SqsConsumerEvents {
 	processingError = 'processing-error',
 	connectionError = 'connection-error',
 	payloadParseError = 'payload-parse-error',
+	messageVisibilityChanged = 'message-visability-changed',
+
 }
 
 export interface SqsMessage {
@@ -73,6 +81,9 @@ export class SqsConsumer {
 	private parsePayload?: (payload: any) => any;
 	private transformMessageBody?: (messageBody: any) => any;
 	private extendedLibraryCompatibility: boolean;
+	private extendMessageVisability: boolean;
+	private messageVisabilityTimeout: number;
+	private messageVisabilityInterval: number;
 
 	constructor(options: SqsConsumerOptions) {
 		if (options.sqs) {
@@ -104,6 +115,9 @@ export class SqsConsumer {
 		this.transformMessageBody = options.transformMessageBody;
 		this.extendedLibraryCompatibility =
 			options.extendedLibraryCompatibility;
+		this.extendMessageVisability = options.extendMessageVisability || false;
+		this.messageVisabilityTimeout = options.messageVisabilityTimeout ?? 20 * 60 // 20 minutes
+		this.messageVisabilityInterval = (options.messageVisabilityInterval ?? 5 * 60) * 1000 // 5 minutes
 	}
 
 	static create(options: SqsConsumerOptions): SqsConsumer {
@@ -185,7 +199,7 @@ export class SqsConsumer {
 		try {
 			const messagesWithPayload = await Promise.all(
 				messages.map(async message => {
-					const {payload, s3PayloadMeta} =
+					const { payload, s3PayloadMeta } =
 						await this.preparePayload(message);
 					const messageWithPayload = {
 						message,
@@ -215,7 +229,7 @@ export class SqsConsumer {
 		const messageBody = this.transformMessageBody
 			? this.transformMessageBody(message.Body)
 			: message.Body;
-		const {rawPayload, s3PayloadMeta} = await this.getMessagePayload(
+		const { rawPayload, s3PayloadMeta } = await this.getMessagePayload(
 			messageBody,
 			message.MessageAttributes
 		);
@@ -229,34 +243,44 @@ export class SqsConsumer {
 
 	private async processMsg(
 		message: Message,
-		{deleteAfterProcessing = true}: ProcessingOptions = {}
+		{ deleteAfterProcessing = true }: ProcessingOptions = {}
 	): Promise<void> {
+		let heartbeat;
+
+		if (this.extendMessageVisability) {
+			heartbeat = this.startVisibilityHeartbeat(message);
+		}
+
 		try {
 			this.events.emit(SqsConsumerEvents.messageReceived, message);
-			const {payload, s3PayloadMeta} = await this.preparePayload(message);
+			const { payload, s3PayloadMeta } = await this.preparePayload(message);
 			this.events.emit(SqsConsumerEvents.messageParsed, {
 				message,
 				payload,
 				s3PayloadMeta,
 			});
 			if (this.handleMessage) {
-				await this.handleMessage({payload, message, s3PayloadMeta});
+				await this.handleMessage({ payload, message, s3PayloadMeta });
 			}
 			if (deleteAfterProcessing) {
 				await this.deleteMessage(message);
 			}
 			this.events.emit(SqsConsumerEvents.messageProcessed, message);
 		} catch (err) {
-			this.events.emit(SqsConsumerEvents.processingError, {err, message});
+			this.events.emit(SqsConsumerEvents.processingError, { err, message });
+		} finally {
+			if (this.extendMessageVisability && heartbeat) {
+				clearInterval(heartbeat);
+			}
 		}
 	}
 
 	private async getMessagePayload(
 		messageBody: any,
 		attributes: Record<string, MessageAttributeValue>
-	): Promise<{rawPayload: any; s3PayloadMeta?: S3PayloadMeta}> {
+	): Promise<{ rawPayload: any; s3PayloadMeta?: S3PayloadMeta }> {
 		if (!this.getPayloadFromS3) {
-			return {rawPayload: messageBody};
+			return { rawPayload: messageBody };
 		}
 		let s3PayloadMeta: S3PayloadMeta;
 		try {
@@ -321,9 +345,9 @@ export class SqsConsumer {
 					throw err;
 				}
 			}
-			return {rawPayload: messageBody};
+			return { rawPayload: messageBody };
 		} catch (error) {
-			return {rawPayload: messageBody};
+			return { rawPayload: messageBody };
 		}
 	}
 
@@ -363,4 +387,32 @@ export class SqsConsumer {
 			})),
 		});
 	}
+
+	private startVisibilityHeartbeat(message: Message): NodeJS.Timeout {
+		const extend = async () => {
+			try {
+				await this.sqs.send(
+					new ChangeMessageVisibilityCommand({
+						QueueUrl: this.queueUrl,
+						ReceiptHandle: message.ReceiptHandle,
+						VisibilityTimeout: this.messageVisabilityTimeout,
+					})
+				);
+				this.events.emit(SqsConsumerEvents.messageVisibilityChanged, {
+					message,
+				});
+			} catch (err) {
+				this.events.emit(SqsConsumerEvents.error, err);
+			}
+		};
+
+		// first extension right away
+		extend();
+
+		// then periodic renewals
+		const timer: NodeJS.Timeout = setInterval(extend, this.messageVisabilityInterval);
+
+		return timer;
+	}
+
 }
