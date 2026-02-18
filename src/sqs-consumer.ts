@@ -53,7 +53,7 @@ export enum SqsConsumerEvents {
 	processingError = 'processing-error',
 	connectionError = 'connection-error',
 	payloadParseError = 'payload-parse-error',
-	messageVisibilityChanged = 'message-visability-changed',
+	messageVisibilityChanged = 'message-visibility-changed',
 }
 
 export interface SqsMessage {
