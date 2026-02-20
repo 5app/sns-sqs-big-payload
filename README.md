@@ -103,6 +103,12 @@ const sqsConsumer = SqsConsumer.create({
 	// Amazon SQS Extended Client Java Library (and other compatible libraries).
 	// see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
 	extendedLibraryCompatibility: boolean,
+
+	// Opt-in to enable extending message visibility to reduce re-processing of
+	// messages
+	extendMessageVisibility: boolean;
+	messageVisibilityTimeout: number;
+	messageVisibilityInterval: number;
 });
 
 // to subscribe for events
@@ -193,6 +199,7 @@ It sends the following events:
 | processing-error          | `{err, message}` | Fires when an error occurs during processing (only inside `handleMessage` function) |
 | connection-error          | `err`            | Fires when a connection error occurs during polling (retriable)                     |
 | payload-parse-error       | `err`            | Fires when a connection error occurs during parsing                                 |
+message-visibility-changed	| `message`			| Fires when the message visability is extended
 
 You can also use this enum if you're using TypeScript
 
@@ -210,6 +217,7 @@ enum SqsConsumerEvents {
 	processingError = 'processing-error',
 	connectionError = 'connection-error',
 	payloadParseError = 'payload-parse-error',
+	messageVisibilityChanged = 'message-visibility-changed',
 }
 ```
 

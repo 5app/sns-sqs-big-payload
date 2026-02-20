@@ -602,6 +602,7 @@ describe('sns-sqs-big-payload', () => {
 					expect(
 						handlers[SqsConsumerEvents.messageVisibilityChanged]
 					).toHaveBeenCalledTimes(2);
+					expect(receivedMessage.payload).toEqual(message);
 				});
 			});
 		});
