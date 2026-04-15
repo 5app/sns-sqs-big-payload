@@ -579,6 +579,31 @@ describe('sns-sqs-big-payload', () => {
 						],
 					});
 				});
+
+				it('should extend message visibility', async () => {
+					const message = {it: 'works'};
+					const handlers = getEventHandlers();
+					await sendMessage(message);
+					const [receivedMessage] = await receiveMessages(
+						1,
+						{
+							extendMessageVisibility: true,
+							messageVisibilityTimeout: 10,
+							messageVisibilityInterval: 2,
+							handleMessage: async () => {
+								await new Promise(resolve =>
+									setTimeout(resolve, 4000)
+								);
+							},
+						},
+						handlers
+					);
+					// success
+					expect(
+						handlers[SqsConsumerEvents.messageVisibilityChanged]
+					).toHaveBeenCalledTimes(2);
+					expect(receivedMessage.payload).toEqual(message);
+				});
 			});
 		});
 

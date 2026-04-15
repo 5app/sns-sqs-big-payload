@@ -5,6 +5,7 @@ import {
 	MessageAttributeValue,
 	ReceiveMessageCommandInput,
 	ReceiveMessageCommandOutput,
+	ChangeMessageVisibilityCommand,
 	SQS,
 } from '@aws-sdk/client-sqs';
 import {EventEmitter} from 'node:events';
@@ -28,6 +29,10 @@ export interface SqsConsumerOptions {
 	// Opt-in to enable compatibility with
 	// Amazon SQS Extended Client Java Library (and other compatible libraries)
 	extendedLibraryCompatibility?: boolean;
+	// Opt-in to enable extending message visibility timeouts for long running message processing
+	extendMessageVisibility?: boolean;
+	messageVisibilityTimeout?: number;
+	messageVisibilityInterval?: number;
 }
 
 export interface ProcessingOptions {
@@ -48,6 +53,7 @@ export enum SqsConsumerEvents {
 	processingError = 'processing-error',
 	connectionError = 'connection-error',
 	payloadParseError = 'payload-parse-error',
+	messageVisibilityChanged = 'message-visibility-changed',
 }
 
 export interface SqsMessage {
@@ -73,6 +79,9 @@ export class SqsConsumer {
 	private parsePayload?: (payload: any) => any;
 	private transformMessageBody?: (messageBody: any) => any;
 	private extendedLibraryCompatibility: boolean;
+	private extendMessageVisibility: boolean;
+	private messageVisibilityTimeout: number;
+	private messageVisibilityInterval: number;
 
 	constructor(options: SqsConsumerOptions) {
 		if (options.sqs) {
@@ -104,6 +113,14 @@ export class SqsConsumer {
 		this.transformMessageBody = options.transformMessageBody;
 		this.extendedLibraryCompatibility =
 			options.extendedLibraryCompatibility;
+		this.extendMessageVisibility = options.extendMessageVisibility || false;
+		// Visibility timeout in SECONDS (default: 20 minutes).
+		this.messageVisibilityTimeout =
+			options.messageVisibilityTimeout ?? 20 * 60;
+		// Visibility extension interval configured in SECONDS, stored internally in MILLISECONDS
+		// for use with timer functions like setInterval / setTimeout (default: 5 minutes).
+		this.messageVisibilityInterval =
+			(options.messageVisibilityInterval ?? 5 * 60) * 1000;
 	}
 
 	static create(options: SqsConsumerOptions): SqsConsumer {
@@ -231,6 +248,12 @@ export class SqsConsumer {
 		message: Message,
 		{deleteAfterProcessing = true}: ProcessingOptions = {}
 	): Promise<void> {
+		let heartbeat;
+
+		if (this.extendMessageVisibility) {
+			heartbeat = this.startVisibilityHeartbeat(message);
+		}
+
 		try {
 			this.events.emit(SqsConsumerEvents.messageReceived, message);
 			const {payload, s3PayloadMeta} = await this.preparePayload(message);
@@ -248,6 +271,10 @@ export class SqsConsumer {
 			this.events.emit(SqsConsumerEvents.messageProcessed, message);
 		} catch (err) {
 			this.events.emit(SqsConsumerEvents.processingError, {err, message});
+		} finally {
+			if (this.extendMessageVisibility && heartbeat) {
+				clearInterval(heartbeat);
+			}
 		}
 	}
 
@@ -362,5 +389,35 @@ export class SqsConsumer {
 				ReceiptHandle: message.ReceiptHandle,
 			})),
 		});
+	}
+
+	private startVisibilityHeartbeat(message: Message): NodeJS.Timeout {
+		const extend = async () => {
+			try {
+				await this.sqs.send(
+					new ChangeMessageVisibilityCommand({
+						QueueUrl: this.queueUrl,
+						ReceiptHandle: message.ReceiptHandle,
+						VisibilityTimeout: this.messageVisibilityTimeout,
+					})
+				);
+				this.events.emit(SqsConsumerEvents.messageVisibilityChanged, {
+					message,
+				});
+			} catch (err) {
+				this.events.emit(SqsConsumerEvents.error, err);
+			}
+		};
+
+		// first extension right away
+		extend();
+
+		// then periodic renewals
+		const timer: NodeJS.Timeout = setInterval(
+			extend,
+			this.messageVisibilityInterval
+		);
+
+		return timer;
 	}
 }

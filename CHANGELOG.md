@@ -1,3 +1,17 @@
+## [1.1.2](https://github.com/5app/sns-sqs-big-payload/compare/v1.1.1...v1.1.2) (2026-03-13)
+
+
+### Bug Fixes
+
+* add functionality to extend the message visabilty for long proce… ([#5](https://github.com/5app/sns-sqs-big-payload/issues/5)) ([549572d](https://github.com/5app/sns-sqs-big-payload/commit/549572d9f02e6c289d4d518e245d4d3c63458b75)), closes [#16958](https://github.com/5app/sns-sqs-big-payload/issues/16958) [#16958](https://github.com/5app/sns-sqs-big-payload/issues/16958) [#16958](https://github.com/5app/sns-sqs-big-payload/issues/16958) [#16958](https://github.com/5app/sns-sqs-big-payload/issues/16958)
+* audit fix noissue ([03d4be0](https://github.com/5app/sns-sqs-big-payload/commit/03d4be08b06b193be49845400c20c2a9b5a22723))
+* lint readme, noissue ([ce6f869](https://github.com/5app/sns-sqs-big-payload/commit/ce6f86954e32dcce31cbeae8a2efed8fa755685c))
+* npm audit fix ([28dbe0a](https://github.com/5app/sns-sqs-big-payload/commit/28dbe0ac022aa1ec4300dcf75a54d2857bf6aad7))
+* npm audit, noissue ([9a20278](https://github.com/5app/sns-sqs-big-payload/commit/9a20278140cc84270e36f664d69b3ae3fbb3f109))
+* npm audit, noissue ([edc0b25](https://github.com/5app/sns-sqs-big-payload/commit/edc0b25bb59c0f941b9cec47b503c5222d37a029))
+* switch to npm trusted publishing noissue ([8af9eed](https://github.com/5app/sns-sqs-big-payload/commit/8af9eed6b40c6244362eec3fd797436588c0ffa1))
+* update readme and improve test, noissue ([4df26af](https://github.com/5app/sns-sqs-big-payload/commit/4df26af6f56dc87e87f75c20583efce3ae7c0950))
+
 ## [1.1.1](https://github.com/5app/sns-sqs-big-payload/compare/v1.1.0...v1.1.1) (2025-04-02)
 
 
